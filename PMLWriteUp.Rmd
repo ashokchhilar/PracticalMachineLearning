@@ -1,0 +1,83 @@
+---
+title: "PMLWriteUp"
+author: "Ashok Chhilar"
+date: "September 25, 2015"
+output: html_document
+---
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. 
+
+##Reading the data
+```{r echo=FALSE}
+library(caret);
+library(rattle);
+library(randomForest);
+```
+
+```{r}
+plm.train<-read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"), na.strings = c("NA","#DIV/0!", ""))
+plm.test<-read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"), na.strings = c("NA","#DIV/0!", ""))
+```
+
+
+##Clean up the data
+In oder to clean up the data, i remove all the columns that have 80% or more 'NA' values in it
+As the model will be trained using the clean up clumnlist, i filter the test set using those column names
+```{r}
+rows<-nrow(plm.train)
+plm.train <- plm.train[!(colSums(is.na(plm.train)) > (rows*0.8))]
+plm.train <- plm.train[-c(1:7)]
+columns<-names(plm.train)
+columns<-columns[columns!='classe']
+plm.test<-plm.test[,columns]
+```
+
+#Model Training and Error estimation
+##Lets Split the available traning set into in.training and in.testing sets
+we will train the model on in.training set and estimate error using in.testing set.
+Lets generate the two sets
+```{r}
+inTrain <- createDataPartition(y=plm.train$classe, p=0.7, list=FALSE)
+in.training <- plm.train[inTrain,]
+in.testing <- plm.train[-inTrain,]
+dim(in.training)
+dim(in.testing)
+```
+
+#Training Using Rpart
+Using Classification Trees - rpart 
+```{r}
+set.seed(123765)
+modelfit<-rpart(classe ~., method = "class", data=in.training)
+fancyRpartPlot(modelfit)
+```
+
+##Estimating out of Sample Error Rate
+We will use the in.testing set (which is not part of the training set) to cross validate the model and generate the error rate.
+```{r}
+predictions <- predict(modelfit, newdata=in.testing, type="class")
+confusionMatrix(predictions, in.testing$classe)
+```
+
+
+#Using RandomForest
+```{r}
+set.seed(32345)
+modelfit<-randomForest(classe ~., method = "class", data=in.training)
+modelfit
+```
+
+
+##Estimating out of Sample Error Rate
+We will use the in.testing set (which is not part of the training set) to cross validate the model and generate the error rate.
+```{r}
+predictions <- predict(modelfit, newdata=in.testing, type="class")
+confusionMatrix(predictions, in.testing$classe)
+```
+
+#Conclusions
+RandomForest provides better out of sample accuray than rpart, so we will use this model for further prediction.
+
+
+
+
